@@ -92,8 +92,6 @@ static async Task<IResult> CreateTarefa(TarefaPostDTO tarefaDTO, GerenciadorTare
     return TypedResults.Created($"/tarefas/{tarefa.Id}", tarefa);
 }
 
-
-
 static async Task<IResult> UpdateTarefa(Guid id, Tarefa inputTarefa, GerenciadorTarefasDb db)
 {
     var tarefa = await db.Tarefas.FindAsync(id);
