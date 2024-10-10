@@ -28,9 +28,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+var configuracao = app.MapGroup("/configuracao");
 var projetos = app.MapGroup("/projetos");
 var tarefas =  app.MapGroup("/tarefas");
 
+configuracao.MapPost("/", ConfiguraDadosBasicos);
 projetos.MapGet("/", GetAllProjetos);
 projetos.MapPost("/", CreateProjeto);
 tarefas.MapGet("/{projetoId}", GetTarefasProjeto);
@@ -38,14 +40,64 @@ tarefas.MapPost("/", CreateTarefa);
 tarefas.MapPut("/{id}", UpdateTarefa);
 tarefas.MapDelete("/{id}", DeleteTarefa);
 
+static async Task<IResult> ConfiguraDadosBasicos(GerenciadorTarefasDb db)
+{
+    Usuario usuario = new Usuario { Id = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a"), Nome = "Rafael da Silva" };
+    Projeto projeto = new Projeto { Id = new Guid("655a71a1-c983-4eb2-95e1-4f08c6bc1498"), Nome = "Projeto de Gerenciamento de Tarefas V1", Descricao = "Esse projeto consiste em criar uma api para gerenciamento de tarefas." };
+
+
+    db.Usuarios.Add(usuario);
+    db.Projetos.Add(projeto);
+    await db.SaveChangesAsync();
+
+    Tarefa tarefa1 = new Tarefa{
+         Titulo = "Criar Solution",
+         Descricao = "Criar solucao do projeto",
+         Prioridade = 1,
+         Status = 1,
+         Vencimento = DateTime.Now.AddDays(5),
+         ProjetoId = new Guid("655a71a1-c983-4eb2-95e1-4f08c6bc1498"),
+         UsuarioId = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a")
+    };
+    Tarefa tarefa2 = new Tarefa{
+         Titulo = "Criar WebApi",
+         Descricao = "Criar cproj da Api minimal",
+         Prioridade = 1,
+         Status = 1,
+         Vencimento = DateTime.Now.AddDays(5),
+         ProjetoId = new Guid("655a71a1-c983-4eb2-95e1-4f08c6bc1498"),
+         UsuarioId = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a")
+    };
+
+    db.Tarefas.Add(tarefa1);
+    db.Tarefas.Add(tarefa2);
+
+    await db.SaveChangesAsync();
+
+    return TypedResults.Ok();
+}
+
 //Projetos
 static async Task<IResult> GetAllProjetos(GerenciadorTarefasDb db)
 {
     return TypedResults.Ok(await db.Projetos.ToArrayAsync());
 }
 
-static async Task<IResult> CreateProjeto(Projeto projeto, GerenciadorTarefasDb db)
+static async Task<IResult> CreateProjeto(ProjetoPostDTO projetoDTO, GerenciadorTarefasDb db)
 {
+    Projeto projeto = new Projeto{
+        Nome = projetoDTO.Nome,
+        Descricao = projetoDTO.Descricao
+    };
+
+    //valida projeto
+    if(string.IsNullOrWhiteSpace(projeto.Nome))
+        return TypedResults.Problem($"O Campo {nameof(projeto.Nome)} deve ser preenchido.");
+
+    if(string.IsNullOrWhiteSpace(projeto.Descricao))
+        return TypedResults.Problem($"O Campo {nameof(projeto.Descricao)} deve ser preenchido.");
+
+
     db.Projetos.Add(projeto);
     await db.SaveChangesAsync();
 
@@ -63,9 +115,10 @@ static async Task<IResult> CreateTarefa(TarefaPostDTO tarefaDTO, GerenciadorTare
     Tarefa tarefa = new Tarefa{
           Descricao = tarefaDTO.Descricao,
           Titulo = tarefaDTO.Titulo,
-          Prioridade = tarefaDTO.Prioridade,
-          Status = tarefaDTO.Status,
-          ProjetoId = tarefaDTO.ProjetoId     
+          Prioridade = ((int)tarefaDTO.Prioridade),
+          Status = ((int)tarefaDTO.Status),
+          ProjetoId = tarefaDTO.ProjetoId,
+          UsuarioId = tarefaDTO.UsuarioId
     };
 
     //valida tarefa
@@ -78,21 +131,35 @@ static async Task<IResult> CreateTarefa(TarefaPostDTO tarefaDTO, GerenciadorTare
     if(tarefa.Prioridade < 1 || tarefa.Prioridade > 3)
         return TypedResults.Problem($"O Campo {nameof(tarefa.Prioridade)} deve ser preenchido com valor de 1 a 3. Onde 1 e prioridade alta, 2 media e 3 baixa.");
     
+    if(tarefa.Status < 1 || tarefa.Status > 3)
+        return TypedResults.Problem($"O Campo {nameof(tarefa.Status)} deve ser preenchido com valor de 1 a 3. Onde 1 e status pendente, 2 em andamento e 3 concluida.");
+    
+
+
     //valida projeto tarefa
     if(string.IsNullOrWhiteSpace(tarefa.ProjetoId.ToString()))
         return TypedResults.Problem($"O Campo {nameof(tarefa.ProjetoId)} deve ser preenchido.");
 
-    var projeto = await db.Tarefas.Where(t => t.ProjetoId == tarefa.ProjetoId).ToListAsync();
+    var projeto = await db.Projetos.Where(t => t.Id == tarefa.ProjetoId).ToListAsync();
     if (!projeto.Any())
         return TypedResults.Problem($"O projeto de id \"{tarefa.ProjetoId}\" nao foi encontrado.");
     
+    //valida usuario tarefa
+    if(string.IsNullOrWhiteSpace(tarefa.UsuarioId.ToString()))
+        return TypedResults.Problem($"O Campo {nameof(tarefa.UsuarioId)} deve ser preenchido.");
+
+    var usuario = await db.Tarefas.Where(t => t.UsuarioId == tarefa.UsuarioId).ToListAsync();
+    if (!usuario.Any())
+        return TypedResults.Problem($"O usuario de id \"{tarefa.UsuarioId}\" nao foi encontrado.");
+
+
     db.Tarefas.Add(tarefa);
     await db.SaveChangesAsync();
 
-    return TypedResults.Created($"/tarefas/{tarefa.Id}", tarefa);
+    return TypedResults.Created($"/tarefas/{tarefa.Id}", tarefaDTO);
 }
 
-static async Task<IResult> UpdateTarefa(Guid id, Tarefa inputTarefa, GerenciadorTarefasDb db)
+static async Task<IResult> UpdateTarefa(Guid id, TarefaPutDTO inputTarefa, GerenciadorTarefasDb db)
 {
     var tarefa = await db.Tarefas.FindAsync(id);
 
@@ -100,9 +167,24 @@ static async Task<IResult> UpdateTarefa(Guid id, Tarefa inputTarefa, Gerenciador
 
     tarefa.Titulo = inputTarefa.Titulo;
     tarefa.Descricao = inputTarefa.Descricao;
-    tarefa.Status = inputTarefa.Status;
+    tarefa.Status = ((int)inputTarefa.Status);
     tarefa.Vencimento = inputTarefa.Vencimento;
     tarefa.UsuarioId = inputTarefa.UsuarioId;
+
+    //valida tarefa
+    if(string.IsNullOrWhiteSpace(tarefa.Descricao))
+        return TypedResults.Problem($"O Campo {nameof(tarefa.Descricao)} deve ser preenchido.");
+
+    if(string.IsNullOrWhiteSpace(tarefa.Titulo))
+        return TypedResults.Problem($"O Campo {nameof(tarefa.Titulo)} deve ser preenchido.");
+
+    //valida usuario tarefa
+    if(string.IsNullOrWhiteSpace(tarefa.UsuarioId.ToString()))
+        return TypedResults.Problem($"O Campo {nameof(tarefa.UsuarioId)} deve ser preenchido.");
+
+    var usuario = await db.Tarefas.Where(t => t.UsuarioId == tarefa.UsuarioId).ToListAsync();
+    if (!usuario.Any())
+        return TypedResults.Problem($"O usuario de id \"{tarefa.UsuarioId}\" nao foi encontrado.");
 
     //Inserir Historico de Atualizacao da tarefa
 

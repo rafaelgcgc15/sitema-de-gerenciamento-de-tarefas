@@ -20,8 +20,15 @@ public class GerenciadorTarefasDb : DbContext
         modelBuilder
         .Entity<HistoricoTarefa>( eb => eb.HasNoKey() );
 
-        modelBuilder.Entity<Usuario>().HasData(new Usuario { Id = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a"), Nome = "Rafael da Silva" });
-
+        modelBuilder.Entity<Tarefa>(
+            entity =>
+            {
+                entity.HasOne(t => t.Projeto)
+                .WithMany(p => p.Tarefas)
+                .HasForeignKey(f => f.ProjetoId);
+            }
+        );
+        
         base.OnModelCreating(modelBuilder);
     }
 
