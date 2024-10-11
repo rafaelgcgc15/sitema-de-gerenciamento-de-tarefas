@@ -16,8 +16,8 @@ builder.Services.AddOpenApiDocument(config =>
     config.Version = "v1";
 });
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseOpenApi();
     app.UseSwaggerUi(config =>
     {
@@ -26,7 +26,7 @@ if (app.Environment.IsDevelopment())
         config.DocumentPath = "/swagger/{documentName}/swagger.json";
         config.DocExpansion = "list";
     });
-}
+//}
 
 var configuracao = app.MapGroup("/configuracao");
 var projetos = app.MapGroup("/projetos");
