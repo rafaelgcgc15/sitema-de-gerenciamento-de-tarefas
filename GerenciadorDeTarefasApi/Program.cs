@@ -33,6 +33,7 @@ var usuarios = app.MapGroup("/usuarios");
 var projetos = app.MapGroup("/projetos");
 var tarefas =  app.MapGroup("/tarefas");
 var historicoTarefas = app.MapGroup("historicoTarefas");
+var relatorioDesempenho = app.MapGroup("relatorioDesempenho");
 
 configuracaoDadosBasicoTeste.MapPost("/", ConfiguraDadosBasicos);
 usuarios.MapGet("/", GetAllUsuarios);
@@ -43,11 +44,17 @@ tarefas.MapPost("/", CreateTarefa);
 tarefas.MapPut("/{id}", UpdateTarefa);
 tarefas.MapDelete("/{id}", DeleteTarefa);
 historicoTarefas.MapGet("/{tarefaId}", GetHistoricoTarefa);
+relatorioDesempenho.MapGet("/{usuarioId}", GetRelatorioDesempenho);
 
 //Configura dados basicos para teste.
 static async Task<IResult> ConfiguraDadosBasicos(GerenciadorTarefasDb db)
 {
-    Usuario usuario = new Usuario { Id = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a"), Nome = "Rafael da Silva" };
+    Usuario usuario = new Usuario { Id = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a"), Nome = "Rafael da Silva", PerfilId = 1 };
+    Usuario usuario2 = new Usuario { Id = new Guid("987da092-ba8c-422a-8497-d8c2b8340f5d"), Nome = "Luis da Silva", PerfilId = 2 };
+    Usuario usuario3 = new Usuario { Id = new Guid("810a4a18-4226-4996-8a5e-5e07a1b6d855"), Nome = "Michel da Silva", PerfilId = 3 };
+    Usuario usuario4 = new Usuario { Id = new Guid("408259bf-acdd-4bfa-92c2-cd3be7f846f7"), Nome = "Diogo da Silva", PerfilId = 3 };
+    Usuario usuario5 = new Usuario { Id = new Guid("87fd580a-addc-4ade-a9c8-af53f41a5e0f"), Nome = "Guido da Silva", PerfilId = 3 };
+
     Projeto projeto = new Projeto { Id = new Guid("655a71a1-c983-4eb2-95e1-4f08c6bc1498"), Nome = "Projeto de Gerenciamento de Tarefas V1", Descricao = "Esse projeto consiste em criar uma api para gerenciamento de tarefas." };
 
     db.Usuarios.Add(usuario);
@@ -103,6 +110,7 @@ static async Task<IResult> CreateTarefa(TarefaPostDTO tarefaDTO, GerenciadorTare
           Titulo = tarefaDTO.Titulo,
           Prioridade = ((int)tarefaDTO.Prioridade),
           Status = ((int)tarefaDTO.Status),
+          DataCasdastro = DateTime.Now,
           ProjetoId = tarefaDTO.ProjetoId,
           UsuarioId = tarefaDTO.UsuarioId
     };
@@ -227,4 +235,18 @@ static async Task<IResult> GetHistoricoTarefa(Guid tarefaId, GerenciadorTarefasD
 {
     return TypedResults.Ok(await db.HistoricoTarefas.Where(t => t.TarefaId == tarefaId).OrderBy(o => o.Versao).ToListAsync());
 }
+
+static async Task<IResult> GetRelatorioDesempenho(Guid usuarioId, GerenciadorTarefasDb db)
+{
+    /*- A API deve fornecer endpoints para gerar relatórios de desempenho, como o número médio de tarefas concluídas por usuário nos últimos 30 dias.
+    - Os relatórios devem ser acessíveis apenas por usuários com uma função específica de "gerente".*/
+    var quantidadeUsuarios = await db.Usuarios.CountAsync();
+    var quantidadeTarefasAtendidas = await db.Tarefas.Where(w => w.Status == 3 && w.DataCasdastro >= DateTime.Now.AddDays(-30)).CountAsync();
+
+    var mediaTarefasConcluidasUsuario = (quantidadeTarefasAtendidas / quantidadeUsuarios);
+
+    return TypedResults.Ok(mediaTarefasConcluidasUsuario);
+
+}
+
 app.Run();
