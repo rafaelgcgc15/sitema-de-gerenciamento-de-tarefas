@@ -9,4 +9,5 @@ public class TarefaPutDTO
     public DateTime Vencimento { get; set; }    
     public Guid UsuarioId { get; set; }
     public Enums.Status Status { get; set; }
+    public string Comentario { get; set; }
 }

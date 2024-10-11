@@ -17,9 +17,6 @@ public class GerenciadorTarefasDb : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder
-        .Entity<HistoricoTarefa>( eb => eb.HasNoKey() );
-
         modelBuilder.Entity<Tarefa>(
             entity =>
             {

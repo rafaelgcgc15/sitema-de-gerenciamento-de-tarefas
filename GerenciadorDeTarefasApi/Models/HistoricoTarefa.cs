@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GerenciadorDeTarefasApi.Models;
 
-[Keyless]
 public class HistoricoTarefa
 {
+    public int Id { get; set; }
     public Guid TarefaId { get; set; }
     public DateTime DataAlteracao { get; set; }
     public int Versao { get; set; }
@@ -13,5 +13,9 @@ public class HistoricoTarefa
     public string Descricao { get; set; }
     public DateTime Vencimento { get; set; }    
     public int Status { get; set; }
+
+    public string Comentario { get; set; }
+    public Guid ProjetoId { get; set; }
+    public int Prioridade { get; set; }
     public Guid UsuarioId { get; set; }    
 }

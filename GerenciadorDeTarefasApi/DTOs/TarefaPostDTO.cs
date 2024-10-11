@@ -9,6 +9,7 @@ public class TarefaPostDTO
     public DateTime Vencimento { get; set; }    
     public Enums.Status Status { get; set; }
     public Enums.Prioridade Prioridade { get; set; }
+    public string Comentario { get; set; }
     public Guid UsuarioId { get; set; }
     public Guid ProjetoId { get; set; }    
 }
