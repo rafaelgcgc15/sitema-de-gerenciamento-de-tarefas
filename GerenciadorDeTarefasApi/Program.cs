@@ -28,11 +28,13 @@ var app = builder.Build();
     });
 //}
 
-var configuracao = app.MapGroup("/configuracao");
+var configuracaoDadosBasicoTeste = app.MapGroup("/configuracaoDadosBasicoTeste");
+var usuarios = app.MapGroup("/usuarios");
 var projetos = app.MapGroup("/projetos");
 var tarefas =  app.MapGroup("/tarefas");
 
-configuracao.MapPost("/", ConfiguraDadosBasicos);
+configuracaoDadosBasicoTeste.MapPost("/", ConfiguraDadosBasicos);
+usuarios.MapGet("/", GetAllUsuarios);
 projetos.MapGet("/", GetAllProjetos);
 projetos.MapPost("/", CreateProjeto);
 tarefas.MapGet("/{projetoId}", GetTarefasProjeto);
@@ -40,6 +42,7 @@ tarefas.MapPost("/", CreateTarefa);
 tarefas.MapPut("/{id}", UpdateTarefa);
 tarefas.MapDelete("/{id}", DeleteTarefa);
 
+//Configura dados basicos para teste.
 static async Task<IResult> ConfiguraDadosBasicos(GerenciadorTarefasDb db)
 {
     Usuario usuario = new Usuario { Id = new Guid("92974a6f-a28e-4337-8d8c-7e326ea3c15a"), Nome = "Rafael da Silva" };
@@ -50,7 +53,7 @@ static async Task<IResult> ConfiguraDadosBasicos(GerenciadorTarefasDb db)
     db.Projetos.Add(projeto);
     await db.SaveChangesAsync();
 
-    Tarefa tarefa1 = new Tarefa{
+    /*Tarefa tarefa1 = new Tarefa{
          Titulo = "Criar Solution",
          Descricao = "Criar solucao do projeto",
          Prioridade = 1,
@@ -72,9 +75,15 @@ static async Task<IResult> ConfiguraDadosBasicos(GerenciadorTarefasDb db)
     db.Tarefas.Add(tarefa1);
     db.Tarefas.Add(tarefa2);
 
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync();*/
 
     return TypedResults.Ok();
+}
+
+//Usuarios
+static async Task<IResult>GetAllUsuarios(GerenciadorTarefasDb db)
+{
+    return TypedResults.Ok(await db.Usuarios.ToArrayAsync());
 }
 
 //Projetos
@@ -140,16 +149,19 @@ static async Task<IResult> CreateTarefa(TarefaPostDTO tarefaDTO, GerenciadorTare
     if(string.IsNullOrWhiteSpace(tarefa.ProjetoId.ToString()))
         return TypedResults.Problem($"O Campo {nameof(tarefa.ProjetoId)} deve ser preenchido.");
 
-    var projeto = await db.Projetos.Where(t => t.Id == tarefa.ProjetoId).ToListAsync();
-    if (!projeto.Any())
+    var projeto = await db.Projetos.Where(t => t.Id == tarefa.ProjetoId).FirstOrDefaultAsync();
+    if (projeto == null)
         return TypedResults.Problem($"O projeto de id \"{tarefa.ProjetoId}\" nao foi encontrado.");
     
+    if(projeto.Tarefas != null && projeto.Tarefas.Count() == 20)
+        return TypedResults.Problem("Cada projeto pode ter no maximo 20 tarefas.");
+
     //valida usuario tarefa
     if(string.IsNullOrWhiteSpace(tarefa.UsuarioId.ToString()))
         return TypedResults.Problem($"O Campo {nameof(tarefa.UsuarioId)} deve ser preenchido.");
 
-    var usuario = await db.Tarefas.Where(t => t.UsuarioId == tarefa.UsuarioId).ToListAsync();
-    if (!usuario.Any())
+    var usuario = await db.Usuarios.Where(u => u.Id == tarefa.UsuarioId).FirstOrDefaultAsync();
+    if (usuario == null)
         return TypedResults.Problem($"O usuario de id \"{tarefa.UsuarioId}\" nao foi encontrado.");
 
 
